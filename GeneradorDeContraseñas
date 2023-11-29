@@ -1,0 +1,93 @@
+import tkinter as tk
+from tkinter import messagebox
+from werkzeug.security import generate_password_hash
+import random
+import sqlite3
+
+minus = "abcdefghijklmnopqrstuvwxyz"
+mayus = minus.upper()
+numeros = "0123456789"
+simbolos = "@()[]{}*,;/-_¿?. ¡!$<#>&+%="
+
+base = minus + mayus + numeros + simbolos
+longitud = 12
+
+
+# Función para generar la contraseña y nombre de usuario, y guardarlos en la base de datos
+def generar_contraseña():
+    nombre = nombre_entry.get()
+    if nombre:
+        conn = sqlite3.connect("C:\\Users\\sera3\\OneDrive\\Documentos\\usuarios.db")
+        cursor = conn.cursor()
+
+        # Crear la tabla "usuarios" si no existe
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS usuarios (
+                id INTEGER PRIMARY KEY,
+                nombre TEXT NOT NULL,
+                contraseña TEXT NOT NULL
+            )
+        """)
+
+        # Verificar si el usuario ya existe en la base de datos
+        cursor.execute("SELECT * FROM usuarios WHERE nombre=?", (nombre,))
+        usuario_existente = cursor.fetchone()
+
+        if not usuario_existente:
+            muestra = random.sample(base, longitud)
+            contraseña = "".join(muestra)
+            password_encriptado = generate_password_hash(contraseña)
+
+            # Insertar información en la base de datos
+            cursor.execute("INSERT INTO usuarios (nombre, contraseña) VALUES (?, ?)", (nombre, password_encriptado))
+
+            conn.commit()
+            conn.close()
+
+            resultado = f"Contraseña: {contraseña} => {password_encriptado}"
+            messagebox.showinfo("Información Generada y Guardada", resultado)
+        else:
+            conn.close()
+            messagebox.showinfo("Usuario Existente", "Este usuario ya ha generado información en esta sesión.")
+    else:
+        messagebox.showerror("Error", "Por favor, ingrese su nombre.")
+
+
+# Función para mostrar la información de los usuarios
+def mostrar_informacion_usuarios():
+    conn = sqlite3.connect("C:\\Users\\sera3\\OneDrive\\Documentos\\usuarios.db")
+    cursor = conn.cursor()
+
+    # Realizar una consulta para obtener todos los registros de la tabla "usuarios"
+    cursor.execute("SELECT * FROM usuarios")
+    registros = cursor.fetchall()
+
+    # Mostrar los registros en la consola
+    for registro in registros:
+        print("ID:", registro[0])
+        print("Nombre:", registro[1])
+        print("Contraseña encriptada:", registro[2])
+        print("\n")
+
+    conn.close()
+
+
+# Crear la ventana principal
+ventana = tk.Tk()
+ventana.title("Generador de Contraseñas y Nombres de Usuario")
+
+# Etiqueta y campo de entrada para el nombre
+nombre_label = tk.Label(ventana, text="Ingrese su nombre:")
+nombre_label.pack()
+nombre_entry = tk.Entry(ventana)
+nombre_entry.pack()
+
+# Botón para generar la contraseña y nombre de usuario
+generar_button = tk.Button(ventana, text="Generar y Guardar Información", command=generar_contraseña)
+generar_button.pack()
+
+# Botón para mostrar la información de los usuarios
+mostrar_button = tk.Button(ventana, text="Mostrar Información de Usuarios", command=mostrar_informacion_usuarios)
+mostrar_button.pack()
+
+ventana.mainloop()
